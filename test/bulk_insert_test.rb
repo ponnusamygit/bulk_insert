@@ -34,6 +34,15 @@ class BulkInsertTest < ActiveSupport::TestCase
     assert_equal 1, worker.result_sets.count
   end
 
+  test "with option to destination_table, worker should receive table name" do
+    assert_difference "User.count", 2 do
+      Testing.bulk_insert values: [
+        [ "Hello", 15, true ],
+        { greeting: "Hey", age: 20, happy: false }
+      ], destination_table: 'users'
+    end
+  end
+
   test "bulk_insert with array should save the array immediately" do
     assert_difference "Testing.count", 2 do
       Testing.bulk_insert values: [
