@@ -104,7 +104,6 @@ empty the batch so that you can add more rows to it if you want. Note
 that all records saved together will have the same created_at/updated_at
 timestamp (unless one was explicitly set).
 
-
 ### Batch Set Size
 
 By default, the size of the insert is limited to 500 rows at a time.
@@ -191,6 +190,29 @@ end
 
 worker.result_sets
 ```
+
+## Ruby and Rails Versions Supported
+
+> :warning: The scope of this gem may be somehow covered natively by the `.insert_all` API
+> introduced by [Rails 6](https://apidock.com/rails/v6.0.0/ActiveRecord/Persistence/ClassMethods/insert_all).
+> This gem represents the state of art for rails version < 6 and it is still open to
+> further developments for more recent versions.
+
+The current CI prevents regressions on the following versions:
+
+ruby / rails | `~>3` | `~>4` | `~>5` | `~>6`
+:-----------:|-------|-------|-------|------
+2.2          |  yes  |  yes  |  no   |  no
+2.3          |  yes  |  yes  |  yes  |  no
+2.4          |  no   |  yes  |  yes  |  no
+2.5          |  no   |  no   |  yes  |  yes
+2.6          |  no   |  no   |  yes  |  yes
+2.7          |  no   |  no   |  yes  |  yes
+
+The adapters covered in the CI are:
+* sqlite
+* mysql
+* postgresql
 
 
 ## License

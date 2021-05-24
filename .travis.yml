@@ -1,0 +1,79 @@
+language: ruby
+arch: amd64
+os: linux
+branch:
+  - master
+# https://docs.travis-ci.com/user/database-setup/#mysql
+services:
+  - mysql
+  - postgresql
+
+rvm:
+  - 2.3
+  - 2.4
+  - 2.5
+  - 2.6
+  - 2.7
+  - ruby-head
+gemfile:
+  - gemfiles/rails_5.gemfile
+  - gemfiles/rails_6.gemfile
+env:
+  - DB_ADAPTER=sqlite
+  - DB_ADAPTER=mysql
+  - DB_ADAPTER=postgresql
+matrix:
+  allow_failures:
+    - rvm: ruby-head
+  include:
+    - rvm: 2.2
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=sqlite
+    - rvm: 2.2
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=mysql
+    - rvm: 2.2
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=postgresql
+    - rvm: 2.2
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=sqlite
+    - rvm: 2.2
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=mysql
+    - rvm: 2.2
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=postgresql
+    - rvm: 2.3
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=sqlite
+    - rvm: 2.3
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=mysql
+    - rvm: 2.3
+      gemfile: gemfiles/rails_3.gemfile
+      env: DB_ADAPTER=postgresql
+    - rvm: 2.3
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=sqlite
+    - rvm: 2.3
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=mysql
+    - rvm: 2.3
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=postgresql
+    - rvm: 2.4
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=sqlite
+    - rvm: 2.4
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=mysql
+    - rvm: 2.4
+      gemfile: gemfiles/rails_4.gemfile
+      env: DB_ADAPTER=postgresql
+  exclude:
+    - rvm: 2.3
+      gemfile: gemfiles/rails_6.gemfile
+    - rvm: 2.4
+      gemfile: gemfiles/rails_6.gemfile
+script: ./ci/000-prepare-database && bundle exec rake

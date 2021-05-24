@@ -1,3 +1,5 @@
+require_relative 'statement_adapters'
+
 module BulkInsert
   class Worker
     attr_reader :connection
@@ -8,6 +10,8 @@ module BulkInsert
     attr_reader :ignore, :update_duplicates, :result_sets
 
     def initialize(connection, table_name, primary_key, column_names, set_size=500, ignore=false, update_duplicates=false, return_primary_keys=false)
+      @statement_adapter = StatementAdapters.adapter_for(connection)
+
       @connection = connection
       @set_size = set_size
 
@@ -89,8 +93,19 @@ module BulkInsert
 
     def execute_query
       if query = compose_insert_query
-        result_set = @connection.exec_query(query)
-        @result_sets.push(result_set) if @return_primary_keys
+
+        # Return primary key support broke mysql compatibility
+        # with rails < 5 mysql adapter. (see issue #41)
+        if ActiveRecord::VERSION::STRING < "5.0.0" && @statement_adapter.is_a?(StatementAdapters::MySQLAdapter)
+          # raise an exception for unsupported return_primary_keys
+          raise ArgumentError.new("BulkInsert does not support @return_primary_keys for mysql and rails < 5") if @return_primary_keys
+
+          # restore v1.6 query execution
+          @connection.execute(query)
+        else
+          result_set = @connection.exec_query(query)
+          @result_sets.push(result_set) if @return_primary_keys
+        end
       end
     end
 
@@ -105,7 +120,10 @@ module BulkInsert
           value = @now if value == :__timestamp_placeholder
 
           if ActiveRecord::VERSION::STRING >= "5.0.0"
-            value = @connection.type_cast_from_column(column, value) if column
+            if column
+              type = @connection.lookup_cast_type_from_column(column)
+              value = type.serialize(value)
+            end
             values << @connection.quote(value)
           else
             values << @connection.quote(value, column)
@@ -116,8 +134,8 @@ module BulkInsert
 
       if !rows.empty?
         sql << rows.join(",")
-        sql << on_conflict_statement
-        sql << primary_key_return_statement
+        sql << @statement_adapter.on_conflict_statement(@columns, ignore, update_duplicates)
+        sql << @statement_adapter.primary_key_return_statement(@primary_key) if @return_primary_keys
         sql
       else
         false
@@ -125,47 +143,8 @@ module BulkInsert
     end
 
     def insert_sql_statement
+      insert_ignore = @ignore ? @statement_adapter.insert_ignore_statement : ''
       "INSERT #{insert_ignore} INTO #{@table_name} (#{@column_names}) VALUES "
-    end
-
-    def insert_ignore
-      if ignore
-        case adapter_name
-        when /^mysql/i
-          'IGNORE'
-        when /\ASQLite/i # SQLite
-          'OR IGNORE'
-        else
-          '' # Not supported
-        end
-      end
-    end
-
-    def primary_key_return_statement
-      if @return_primary_keys && adapter_name =~ /\APost(?:greSQL|GIS)/i
-        " RETURNING #{@primary_key}"
-      else
-        ''
-      end
-    end
-
-    def on_conflict_statement
-      is_postgres = adapter_name =~ /\APost(?:greSQL|GIS)/i
-      if is_postgres && ignore
-        ' ON CONFLICT DO NOTHING'
-      elsif is_postgres && update_duplicates
-        update_values = @columns.map do |column|
-          "#{column.name}=EXCLUDED.#{column.name}"
-        end.join(', ')
-        ' ON CONFLICT(' + update_duplicates.join(', ') + ') DO UPDATE SET ' + update_values
-      elsif adapter_name =~ /^mysql/i && update_duplicates
-        update_values = @columns.map do |column|
-          "`#{column.name}`=VALUES(`#{column.name}`)"
-        end.join(', ')
-        ' ON DUPLICATE KEY UPDATE ' + update_values
-      else
-        ''
-      end
     end
   end
 end
